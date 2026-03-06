@@ -12,7 +12,7 @@ if (file_exists('antibot.php')) {
 
 // Redirect to index if no session username
 if (!isset($_SESSION['username'])) {
-    header("Location: index.html");
+    header("Location: index.php");
     exit();
 }
 
@@ -258,7 +258,7 @@ footer a:hover { text-decoration: underline; }
 
         <h1>Welcome</h1>
 
-        <a class="email-row" href="index.html">
+        <a class="email-row" href="index.php">
             <svg focusable="false" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg">
                 <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="#5f6368"/>
             </svg>
